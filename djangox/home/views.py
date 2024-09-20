@@ -39,6 +39,7 @@ class LineSegmentImageView(APIView):
             q = serializer.validated_data['q']
             reduce_type = serializer.validated_data['reduce_type']
             exact_match = serializer.validated_data['exact_match']
+            print(record_id, q, reduce_type, exact_match)
             
             # Call the handle_quotes_line_segment function
             try:
@@ -160,32 +161,21 @@ def search(request):
     page_list = page_list.distinct()
     print('finished fetching all the searched pages')
 
-    # Serialize the page data
-    serializer = PageSerializer(page_list, many=True)
-    print('serialized all the pages')
-
     # Format the response data
     formatted_data = []
-    for page in tqdm(serializer.data, desc='Formatting the pageserializer data'):
-        book = page['book']
-        formatted_page = {
-            'id': page['id'],
-            'pagetitle': page['pagetitle'],
-            'image': request.build_absolute_uri(page['image']),
-            'txt_file': request.build_absolute_uri(page['txt_file']),
-            'words': page['words'],
+    for page in tqdm(page_list):
+        book = page.book
+        formatted_data.append({
+            'image': 'https://ilocr.iiit.ac.in' + page.image.url,
             'book': {
-                'id': book['id'],
-                'title': f"<tit>{book['title']}</tit>",
-                'author': f"<auth>{book['author']}</auth>",
-                'description': f"<desc>{book['description']}</desc>",
-                # 'thumbnail': request.build_absolute_uri(book['thumbnail']),
-                'thumbnail': 'https://ilocr.iiit.ac.in' + book['thumbnail'],
-                'source': book['source']
+                'id': book.id,
+                'title': book.title,
+                'author': book.author,
+                'description': book.description,
+                'thumbnail': 'https://ilocr.iiit.ac.in' + book.thumbnail.url,
+                'source': book.source,
             }
-        }
-        formatted_data.append(formatted_page)
-
+        })
     return Response(formatted_data)
 
 @api_view(['GET'])

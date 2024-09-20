@@ -9,6 +9,7 @@ import 'react-advanced-cropper/dist/style.css';
 import { ArrowBackIcon, ArrowForwardIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "@chakra-ui/icons";
 import { Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, Box, Button, Input, InputGroup, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Slider, SliderTrack, SliderFilledTrack, SliderThumb, Divider, Image as Imagex, Text, HStack,  useDisclosure, Tooltip} from "@chakra-ui/react";
 import ZoomableRotatableImage from "../components/ZoomRotatableImage";
+import ZoomImage from "../components/ZoomImage";
 
 interface BookResult {
   id: number;
@@ -62,23 +63,50 @@ const SearchResults : React.FC = () => {
     // * book controls
     const [currentBook, setCurrentBook] = useState<BookResult>(book);
     const [currentBookIdx, setCurrentBookIdx] = useState<number>(currentBookIndex);
+    const [isLoadingBook, setIsLoadingBook] = useState<boolean>(false);
 
-    const handlePreviousBook = () => {
+    const handlePreviousBook = async() => {
       if (currentBookIdx > 0) {
+        setIsLoadingBook(true);
         const newIndex = currentBookIdx - 1;
+        const newBook = await fetchHighlightedImages(newIndex);
         setCurrentBookIdx(newIndex);
-        setCurrentBook(allBooks[newIndex]);
+        setCurrentBook(newBook);
         setCurrentMatchIndex(0);
+        allBooks[newIndex] = newBook;
+        setIsLoadingBook(false);
       }
     };
   
-    const handleNextBook = () => {
+    const handleNextBook = async() => {
       if (currentBookIdx < allBooks.length - 1) {
+        setIsLoadingBook(true);
         const newIndex = currentBookIdx + 1;
+        const newBook = await fetchHighlightedImages(newIndex);
         setCurrentBookIdx(newIndex);
-        setCurrentBook(allBooks[newIndex]);
+        setCurrentBook(newBook);
         setCurrentMatchIndex(0);
+        allBooks[newIndex] = newBook;
+        setIsLoadingBook(false);
       }
+    };
+
+    const fetchHighlightedImages = async(index: number) => {
+
+      let newBook: BookResult = allBooks[index]
+      // New API call to get highlighted images
+      const highlightedImagesResponse = await axios.post('https://ilocr.iiit.ac.in/search/api/matched_images/', {
+        record_id: newBook.id, // Adjust if needed
+        q: searchTerm,
+        reduce_type: "and",
+        exact_match: "on"
+      });
+
+      const highlightedImagesArray = Object.values(highlightedImagesResponse.data.diction);
+      newBook.highlightedImages = highlightedImagesArray;
+      console.log(newBook);
+
+      return newBook;
     };
 
     const downloadCroppedImage = () => {
@@ -256,123 +284,133 @@ const SearchResults : React.FC = () => {
       ? Object.values(highlightedImages || {})[highlightedImageIndex]?.text_url
       : bookPages[currentBookPage - 1]?.txt_file || '';
     const isCurrentPageMatched = currentBook.matchedPages.some(matchedPage => matchedPage.includes(bookPages[currentBookPage - 1]?.pagetitle || ''));
+  
+    console.log(currentPageImage);
 
   return (
     <div>
       <div className="h-screen flex">
         <div className="w-1/5 flex flex-col">
-          <Button leftIcon={<ArrowBackIcon />} onClick={() => navigate("/vidhan-search")}>
+          <Button leftIcon={<ArrowBackIcon />} onClick={() => navigate(
+            "/vidhan-search/search",
+            {
+              state: {
+                locationSearchResults: allBooks,
+                locationSearchTerm: searchTerm
+              }
+            }
+          )}>
             <h1>Go back to search</h1>
           </Button>
           <Accordion defaultIndex={[0]} allowMultiple>
-              <AccordionItem>
-                  <AccordionButton>
-                      <Box as='span' flex='1' textAlign='left'>
-                          Zoom and Navigate
-                      </Box>
-                      <AccordionIcon />
-                  </AccordionButton>
-                  <AccordionPanel pb={4}>
-                      <div className="flex justify-evenly">
-                          <ZoomPreview zoomLevel={zoomLevel} />
-                          <Slider
-                              aria-label='zoom-slider'
-                              defaultValue={0}
-                              min={1}
-                              max={10}
-                              step={0.1}
-                              orientation='vertical'
-                              minH='32'
-                              onChange={handleZoomChange}
-                          >
-                            <SliderTrack>
-                                <SliderFilledTrack />
-                            </SliderTrack>
-                            <SliderThumb />
-                          </Slider>
-                          <div className="flex flex-col justify-evenly">
-                            <Tooltip label='Rotate Left'>
-                              <Button onClick={()=> {setRotationAngle(rotationAngle - 90)}}>
-                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  className="icon icon-tabler icons-tabler-outline icon-tabler-rotate-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 4.55a8 8 0 0 0 -6 14.9m0 -4.45v5h-5" /><path d="M18.37 7.16l0 .01" /><path d="M13 19.94l0 .01" /><path d="M16.84 18.37l0 .01" /><path d="M19.37 15.1l0 .01" /><path d="M19.94 11l0 .01" /></svg>
-                              </Button>
-                            </Tooltip>
-                            <Tooltip label='Rotate Right'>
-                              <Button onClick={()=> {setRotationAngle(rotationAngle + 90)}}>
-                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  className="icon icon-tabler icons-tabler-outline icon-tabler-rotate-clockwise-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 4.55a8 8 0 0 1 6 14.9m0 -4.45v5h5" /><path d="M5.63 7.16l0 .01" /><path d="M4.06 11l0 .01" /><path d="M4.63 15.1l0 .01" /><path d="M7.16 18.37l0 .01" /><path d="M11 19.94l0 .01" /></svg>
-                              </Button>
-                            </Tooltip>
-                            <Tooltip label='Reset'>
-                              <Button onClick={()=> {setRotationAngle(0)}}>
-                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  className="icon icon-tabler icons-tabler-outline icon-tabler-restore"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3.06 13a9 9 0 1 0 .49 -4.087" /><path d="M3 4.001v5h5" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>                              </Button>
-                            </Tooltip>
-                          </div>
-                      </div>
-                  </AccordionPanel>
-              </AccordionItem>
-              <Divider />
-              <AccordionItem>
-                  <AccordionButton>
-                      <Box as='span' flex='1' textAlign='left'>
-                          Pages
-                      </Box>
-                      <AccordionIcon />
-                  </AccordionButton>
-                  <AccordionPanel pb={4}>
-                    <Text>Matches in the page</Text>
+            {/* <AccordionItem>
+                <AccordionButton>
+                    <Box as='span' flex='1' textAlign='left'>
+                      Zoom and Navigate
+                    </Box>
+                    <AccordionIcon />
+                </AccordionButton>
+                <AccordionPanel pb={4}>
+                  <div className="flex justify-evenly">
+                    <ZoomPreview zoomLevel={zoomLevel} />
+                    <Slider
+                      aria-label='zoom-slider'
+                      defaultValue={0}
+                      min={1}
+                      max={10}
+                      step={0.1}
+                      orientation='vertical'
+                      minH='32'
+                      onChange={handleZoomChange}
+                    >
+                      <SliderTrack>
+                        <SliderFilledTrack />
+                      </SliderTrack>
+                      <SliderThumb />
+                    </Slider>
+                    <div className="flex flex-col justify-evenly">
+                      <Tooltip label='Rotate Left'>
+                        <Button onClick={()=> {setRotationAngle(rotationAngle - 90)}}>
+                          <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  className="icon icon-tabler icons-tabler-outline icon-tabler-rotate-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 4.55a8 8 0 0 0 -6 14.9m0 -4.45v5h-5" /><path d="M18.37 7.16l0 .01" /><path d="M13 19.94l0 .01" /><path d="M16.84 18.37l0 .01" /><path d="M19.37 15.1l0 .01" /><path d="M19.94 11l0 .01" /></svg>
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label='Rotate Right'>
+                        <Button onClick={()=> {setRotationAngle(rotationAngle + 90)}}>
+                          <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  className="icon icon-tabler icons-tabler-outline icon-tabler-rotate-clockwise-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 4.55a8 8 0 0 1 6 14.9m0 -4.45v5h5" /><path d="M5.63 7.16l0 .01" /><path d="M4.06 11l0 .01" /><path d="M4.63 15.1l0 .01" /><path d="M7.16 18.37l0 .01" /><path d="M11 19.94l0 .01" /></svg>
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label='Reset'>
+                        <Button onClick={()=> {setRotationAngle(0)}}>
+                          <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  className="icon icon-tabler icons-tabler-outline icon-tabler-restore"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3.06 13a9 9 0 1 0 .49 -4.087" /><path d="M3 4.001v5h5" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>                              </Button>
+                      </Tooltip>
+                    </div>
+                  </div>
+                </AccordionPanel>
+            </AccordionItem>
+            <Divider /> */}
+            <AccordionItem>
+              <AccordionButton>
+                <Box as='span' flex='1' textAlign='left'>
+                    Pages
+                </Box>
+                <AccordionIcon />
+              </AccordionButton>
+              <AccordionPanel pb={4}>
+                <Text>Matches in the page</Text>
 
-                    <HStack justifyContent="space-between" className="py-4">
-                      <Button
-                        onClick={() => handleMatchedPageChange(currentMatchIndex - 1)}
-                        isDisabled={currentMatchIndex === 0}
-                      >
-                          <ArrowBackIcon />
-                      </Button>
+                <HStack justifyContent="space-between" className="py-4">
+                  <Button
+                    onClick={() => handleMatchedPageChange(currentMatchIndex - 1)}
+                    isDisabled={currentMatchIndex === 0}
+                  >
+                    <ArrowBackIcon />
+                  </Button>
 
-                      <InputGroup size="sm" className="flex justify-center gap-x-4">
-                        <Input
-                          value={currentMatchIndex + 1}
-                          onChange={(e) => handleMatchedPageChange(Number(e.target.value) - 1)}
-                          width="3rem"
-                        />
-                        <Input value={book.matchedPages.length} isReadOnly width="3rem" ml={-1} />
-                      </InputGroup>
+                  <InputGroup size="sm" className="flex justify-center gap-x-4">
+                    <Input
+                      value={currentMatchIndex + 1}
+                      onChange={(e) => handleMatchedPageChange(Number(e.target.value) - 1)}
+                      width="3rem"
+                    />
+                    <Input value={book.matchedPages.length} isReadOnly width="3rem" ml={-1} />
+                  </InputGroup>
 
-                      <Button
-                        onClick={() => handleMatchedPageChange(currentMatchIndex + 1)}
-                        isDisabled={currentMatchIndex === book.matchedPages.length - 1}
-                      >
-                        <ArrowForwardIcon />
-                      </Button>
-                    </HStack>
+                  <Button
+                    onClick={() => handleMatchedPageChange(currentMatchIndex + 1)}
+                    isDisabled={currentMatchIndex === book.matchedPages.length - 1}
+                  >
+                    <ArrowForwardIcon />
+                  </Button>
+                </HStack>
 
-                    <Text mt={4}>Pages in the book</Text>
+                <Text mt={4}>Pages in the book</Text>
 
-                    <HStack justifyContent="space-between" className="py-4">
-                      <Button 
-                        onClick={() => handleBookPageChange(currentBookPage - 1)} 
-                        isDisabled={currentBookPage === 1}
-                      >
-                        <ArrowBackIcon />
-                      </Button>
+                <HStack justifyContent="space-between" className="py-4">
+                  <Button 
+                    onClick={() => handleBookPageChange(currentBookPage - 1)} 
+                    isDisabled={currentBookPage === 1}
+                  >
+                    <ArrowBackIcon />
+                  </Button>
 
-                      <InputGroup size="sm" className="flex justify-center gap-x-4">
-                        <Input 
-                          value={currentBookPage}
-                          onChange={(e) => handleBookPageChange(Number(e.target.value))}
-                          width="3rem"
-                        />
-                        <Input value={bookPages.length} isReadOnly width="3rem" ml={-1} />
-                      </InputGroup>
+                  <InputGroup size="sm" className="flex justify-center gap-x-4">
+                    <Input 
+                      value={currentBookPage}
+                      onChange={(e) => handleBookPageChange(Number(e.target.value))}
+                      width="3rem"
+                    />
+                    <Input value={bookPages.length} isReadOnly width="3rem" ml={-1} />
+                  </InputGroup>
 
-                      <Button 
-                        onClick={() => handleBookPageChange(currentBookPage + 1)} 
-                        isDisabled={currentBookPage === bookPages.length}
-                      >
-                        <ArrowForwardIcon />
-                      </Button>
-                    </HStack>
-                  </AccordionPanel>
-              </AccordionItem>
+                  <Button 
+                    onClick={() => handleBookPageChange(currentBookPage + 1)} 
+                    isDisabled={currentBookPage === bookPages.length}
+                  >
+                    <ArrowForwardIcon />
+                  </Button>
+                </HStack>
+              </AccordionPanel>
+            </AccordionItem>
           </Accordion>
         </div>
         
@@ -385,10 +423,10 @@ const SearchResults : React.FC = () => {
             </div>
 
             <HStack>
-              <Button leftIcon={<ArrowBackIcon />} onClick={handlePreviousBook} isDisabled={currentBookIdx === 0}>
+              <Button leftIcon={<ArrowBackIcon />} onClick={handlePreviousBook} isDisabled={currentBookIdx === 0} isLoading={isLoadingBook}>
                 Previous Book
               </Button>
-              <Button rightIcon={<ArrowForwardIcon />} onClick={handleNextBook} isDisabled={currentBookIdx === allBooks.length - 1}>
+              <Button rightIcon={<ArrowForwardIcon />} onClick={handleNextBook} isDisabled={currentBookIdx === allBooks.length - 1} isLoading={isLoadingBook}>
                 Next Book
               </Button>
 
@@ -454,14 +492,21 @@ const SearchResults : React.FC = () => {
             </HStack>
           </div>
 
-          <div className="flex-1 overflow-y-scroll p-4 bg-stone-200">
-              <ZoomableRotatableImage
+          <div className="flex-1 p-4 bg-stone-200">
+              <ZoomImage
                 src={`https://ilocr.iiit.ac.in${currentPageImage}`}
                 alt={`Page ${currentBookPage}`}
                 zoomLevel={zoomLevel}
                 rotationAngle={rotationAngle}
                 crossOrigin="anonymous"
               />
+              {/* <ZoomableRotatableImage
+                src={`https://ilocr.iiit.ac.in${currentPageImage}`}
+                alt={`Page ${currentBookPage}`}
+                zoomLevel={zoomLevel}
+                rotationAngle={rotationAngle}
+                crossOrigin="anonymous"
+              /> */}
 
             <Button
               position="absolute"

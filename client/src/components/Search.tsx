@@ -39,19 +39,24 @@ const Search: React.FC<SearchProps> = ({ onSearchResults }) => {
 
   const handleSearch = async() => {
     try {
-      const response = await axios.get<SearchResult[]>(`https://ilocr.iiit.ac.in/search/api/search/?q=${searchTerm}&reduce_type=${allWords?"and":"or"}&exact_match=${allWords?"on":"off"}`);
+      const response = await axios.get<SearchResult[]>(
+        `https://ilocr.iiit.ac.in/search/api/search/?q=${searchTerm}&reduce_type=${allWords?"and":"or"}&exact_match=${exactMatch?"on":"off"}`
+      );
       
       const bookMap = new Map<number, BookResult>();
       
       response.data.forEach(result => {
+        console.log(result);
         const { book, image } = result;
+        console.log(book);
+        console.log(image);
         
         if (!bookMap.has(book.id)) {
           bookMap.set(book.id, {
             ...book,
-            title: book.title.replace(/<\/?tit>/g, ''),
-            author: book.author.replace(/<\/?auth>/g, ''),
-            description: book.description.replace(/<\/?desc>/g, ''),
+            title: book.title,
+            author: book.author,
+            description: book.description,
             matches: 1,
             matchedPages: [image]
           });
@@ -84,24 +89,24 @@ const Search: React.FC<SearchProps> = ({ onSearchResults }) => {
       }
 
       // New API call to get highlighted images
-      const highlightedImagesResponse = await axios.post('https://ilocr.iiit.ac.in/search/api/matched_images/', {
-        record_id: 1, // Adjust if needed
-        q: searchTerm,
-        reduce_type: allWords ? "and" : "or",
-        exact_match: allWords ? "on" : "off"
-      });
+      // const highlightedImagesResponse = await axios.post('https://ilocr.iiit.ac.in/search/api/matched_images/', {
+      //   record_id: 10, // Adjust if needed
+      //   q: searchTerm,
+      //   reduce_type: allWords ? "and" : "or",
+      //   exact_match: allWords ? "on" : "off"
+      // });
 
-      console.log(highlightedImagesResponse.data.diction);
-      const highlightedImagesArray = Object.values(highlightedImagesResponse.data.diction);
-      console.log(highlightedImagesArray);
+      // console.log(highlightedImagesResponse.data.diction);
+      // const highlightedImagesArray = Object.values(highlightedImagesResponse.data.diction);
+      // console.log(highlightedImagesArray);
 
-      // Add highlighted images to book results
-      bookResults = bookResults.map(book => ({
-        ...book,
-        highlightedImages: highlightedImagesArray
-      }));
+      // // Add highlighted images to book results
+      // bookResults = bookResults.map(book => ({
+      //   ...book,
+      //   highlightedImages: highlightedImagesArray
+      // }));
 
-      console.log(bookResults[0]?.highlightedImages);
+      // console.log(bookResults[0]?.highlightedImages);
 
       onSearchResults(bookResults, searchTerm);
     } catch (error) {

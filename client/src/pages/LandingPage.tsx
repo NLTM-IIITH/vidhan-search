@@ -3,7 +3,7 @@ import hero from "../assets/images/6.jpg";
 import { useNavigate } from "react-router-dom";
 
 const LandingPage = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   return (
     <div className="h-screen">
       <div></div>
@@ -12,7 +12,7 @@ const LandingPage = () => {
             <h1 className="font-semibold text-4xl">Search Engine for</h1>
             <h1 className="font-semibold text-4xl">Punjab Vidhan Sabha</h1>
             <div className="py-4">
-                <Button colorScheme='blue' onClick={()=>navigate("/vidhan-search/search")}>Get started</Button>
+              <Button colorScheme='blue' onClick={()=>navigate("/vidhan-search/search")}>Get started</Button>
             </div>
         </div>
         <div>

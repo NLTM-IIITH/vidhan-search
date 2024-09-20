@@ -6,8 +6,8 @@ const ZoomableRotatableImage = ({ src, alt, zoomLevel, rotationAngle, ...props }
       width: '100%',
       height: '100%',
       display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: 'left',
+      alignItems: 'left',
       overflow: 'auto'
     }}>
       <ChakraImage
@@ -15,7 +15,7 @@ const ZoomableRotatableImage = ({ src, alt, zoomLevel, rotationAngle, ...props }
         alt={alt}
         style={{
           transform: `scale(${zoomLevel}) rotate(${rotationAngle}deg)`,
-          transformOrigin: 'top left',
+          transformOrigin: 'center center',
           maxWidth: '100%',
           maxHeight: '100%',
           objectFit: 'contain'

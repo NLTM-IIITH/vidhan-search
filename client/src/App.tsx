@@ -19,7 +19,7 @@ function RedirectToMain() {
     <>
       <Routes>
         <Route path="/" element={<RedirectToMain />}/> 
-	<Route path="/vidhan-search" element={<LandingPage />}/>
+        <Route path="/vidhan-search" element={<LandingPage />}/>
         <Route path="/vidhan-search/search" element={<Home />}/>
         <Route path="/vidhan-search/view" element={<SearchResults />}/>
         <Route path="/vidhan-search/contact" element={<Contact />} />
